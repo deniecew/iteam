@@ -1,0 +1,117 @@
+---
+title: "i-team Data Exercise - Baseline Report"
+author: "Deniece Williams"
+format: html
+editor: visual
+---
+
+## Background
+
+-   Hillsborough County is located in the west-central portion of Florida. With a population of 1,461,722, it is the fourth most populous county in Florida.
+
+-   Hillsborough County's topography varies from coastal cities to rural farmlands. Based on the source data provided, the population lives in 325 census tracts covering an area of approximately 989.9 square miles.
+
+-   2024 was unprecedented for the region in the amount of natural disasters that hit over a relatively short time span, resulting in significant personal and structural loss.
+
+-   This baseline report can be used to evaluate and investigate the true regional impact of these natural disasters on the population.
+
+<!-- [![Hillsborough County](data.news-leader.com.png)](https://data.news-leader.com/census/total-population/total-population-change/census-tract-13907-hillsborough-county-florida/140-12057013907/) -->
+
+## Methodology
+
+-   This report focuses on baseline measures associated with socioeconomic status, minority members of the population, and population density.
+
+-   Census data from the website https://data.news-leader.com was used to determine street level data associated with census tracts and FIPS codes.
+
+-   Data was analyzed using the R programming language.
+
+```{r}
+#| echo: false
+#| warning: false
+
+#load packages
+library (dplyr)
+library (janitor)
+library (ggplot2)
+
+iteam <- read.csv("C:/Users/4477078/OneDrive - Moffitt Cancer Center/iteam.csv")
+
+#Cleaning & Organizing the Data -----
+#Filter for Tampa Bay area, calculate population density and proportion of population in poverty per census tract
+hbcounty <- iteam %>%
+  clean_names() %>%
+  filter (state == 'Florida') %>%
+  filter (county == 'Hillsborough County')
+
+#total number of FL counties is 67, fips_code/ census tracts is 325
+
+hbcounty_summary <- hbcounty %>%
+  mutate (prop_bipoc = bipoc_residents / population) %>%
+  mutate (prop_below_150_poverty = ppl_below_150_poverty / population) %>%
+  mutate (pop_density = population / area_in_sq_mi)
+
+# sum(hbcounty_summary$area_in_sq_mi)  #total square miles
+# sum(hbcounty_summary$population)  #total population
+
+hbcounty_numeric <- hbcounty_summary %>%
+  select (-c(state,county,fips_code,location))
+
+outliers_population <- hbcounty_summary %>%
+  select(c(fips_code, area_in_sq_mi, population, pop_density)) %>%
+  arrange(-pop_density) 
+
+```
+
+## Population Density
+
+-   Population density was calculated by dividing the population by the area in square miles.
+
+-   Approximately 7.4% of the tracts were densely populated with more than 8000 people per square mile. Most of these tracts are located in or around the University of South Florida campus and can be due to the high concentration of off campus apartment homes.
+
+```{r}
+#| echo: false
+#| warning: false
+
+ggplot(data = hbcounty_summary, aes(y = pop_density)) + 
+  geom_boxplot() + 
+  scale_x_discrete() +
+  labs(title = "Population Density in Hillsborough County Census Tracts",
+       y = "Population Density (population / area in square miles)")
+
+
+# head (outliers_population)
+
+```
+
+## BIPOC & Poverty
+
+The proportion of the BIPOC members of the population ranged from `r round(min(hbcounty_summary$prop_bipoc),3)*100`% to `r round(max(hbcounty_summary$prop_bipoc),3)*100`%
+
+```{r}
+#| echo: false
+#| warning: false
+
+ggplot(data = hbcounty_summary, aes(y = prop_bipoc)) + 
+  geom_boxplot() + 
+  scale_x_discrete() +
+  labs(title = "Proportion BIPOC in Hillsborough County Census Tracts",
+       y = "Proportion BIPOC (bipoc_residents/ population)")
+
+```
+
+There appears to be a moderate positive correlation (r=0.6310872, p\<0.0001) between poverty and proportion of the population within the census tract that is classified as BIPOC.
+
+```{r}
+#| echo: false
+#| warning: false
+
+cor.test(hbcounty_summary$prop_bipoc, hbcounty_summary$prop_below_150_poverty, method = "pearson")
+
+ggplot(hbcounty_summary, aes(x = prop_bipoc, y = prop_below_150_poverty)) +
+  geom_point(color = "blue", size = 2) +
+  geom_smooth(method = "lm", color = "red", se = FALSE) +
+  labs(title = "Scatter Plot with Pearson Correlation",
+       x = "Proportion BIPOC", y = " Prop Below 150% Poverty") +
+  theme_minimal()
+
+```
