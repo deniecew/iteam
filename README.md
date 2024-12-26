@@ -1,1 +1,1 @@
-This is a mini data analysis project for a newly formed Innovation team for the City of Atlanta.
+This is a mini data analysis project for the newly formed Innovation Team - City of Atlanta.
